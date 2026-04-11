@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蝦皮支付寶授權扣款 Prototype</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body { height: 100%; }
+
+  body {
+    background: #f4f4f6;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang TC", "Helvetica Neue", sans-serif;
+  }
+
+  .phone {
+    width: 100%;
+    min-height: 100dvh;
+    position: relative;
+    background: #f4f4f6;
+    overflow-x: hidden;
+  }
+
+  /* ===== STATUS BAR ===== */
+  .status-bar {
+    height: 54px;
+    padding-top: 21px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .status-bar .time-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 16px;
+    padding-right: 6px;
+  }
+  .status-bar .time {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 22px;
+    letter-spacing: -0.43px;
+    color: #000;
+  }
+  .status-bar .dynamic-island { width: 124px; height: 10px; flex-shrink: 0; }
+  .status-bar .icons-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding-left: 6px;
+    padding-right: 16px;
+  }
+  .status-bar img { display: block; }
+
+  /* ===== NAVBAR ===== */
+  .navbar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #f4f4f6;
+    z-index: 10;
+  }
+  .navbar-content {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+  }
+  .navbar-title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 20px;
+    letter-spacing: -0.23px;
+    color: #292f40;
+    text-align: center;
+    width: 230px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .back-btn {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .icon-space { width: 24px; height: 24px; }
+
+  /* ===== PAGE CONTENT ===== */
+  .page-content {
+    padding: 20px 16px;
+    padding-bottom: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  /* ===== SECTION ===== */
+  .section { display: flex; flex-direction: column; gap: 16px; align-items: flex-end; width: 100%; }
+  .section-text { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .section-title { font-size: 20px; font-weight: 600; line-height: 25px; letter-spacing: -0.45px; color: rgba(0,0,0,0.88); }
+  .section-desc { font-size: 15px; font-weight: 400; line-height: 20px; letter-spacing: -0.23px; color: rgba(0,0,0,0.65); }
+
+  /* ===== CARD ===== */
+  .card { display: flex; flex-direction: column; width: 100%; }
+  .card-top { background: #fff; border-radius: 12px 12px 0 0; border-bottom: 0.34px solid #d9d9d9; padding: 12px; }
+  .card-bottom { background: #fff; border-radius: 0 0 12px 12px; padding: 12px; }
+  .shopee-row { display: flex; align-items: center; gap: 12px; }
+  .shopee-name { font-size: 17px; font-weight: 600; line-height: 22px; letter-spacing: -0.43px; color: rgba(0,0,0,0.88); }
+  .auth-item-row { display: flex; align-items: flex-start; justify-content: space-between; }
+  .auth-item-label { font-size: 15px; font-weight: 400; line-height: 20px; letter-spacing: -0.23px; color: rgba(0,0,0,0.65); white-space: nowrap; }
+  .auth-item-value { font-size: 15px; font-weight: 400; line-height: 20px; letter-spacing: -0.23px; color: rgba(0,0,0,0.88); width: 214px; }
+
+  /* ===== PAYMENT LIST ===== */
+  .payment-card { display: flex; flex-direction: column; width: 100%; }
+  .payment-list { background: #fff; border-radius: 12px 12px 0 0; padding: 12px; display: flex; flex-direction: column; gap: 16px; }
+  .payment-divider { height: 1px; background: #f0f0f0; width: 100%; }
+  .payment-item { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+  .payment-item-left { display: flex; align-items: flex-start; gap: 6px; }
+  .payment-item-text { display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
+  .payment-item-name { font-size: 15px; font-weight: 400; line-height: 20px; letter-spacing: -0.23px; color: rgba(0,0,0,0.88); white-space: nowrap; }
+  .payment-item-subtitle { font-size: 13px; font-weight: 400; line-height: 18px; letter-spacing: -0.08px; color: rgba(0,0,0,0.65); white-space: nowrap; }
+  .payment-item-name.linebank { color: #292f40; font-family: "PingFang TC", sans-serif; }
+
+  .add-btn-area { background: #fff; border-radius: 0 0 12px 12px; padding: 12px; }
+  .add-btn {
+    width: 100%; height: 40px; border: 1px solid #1677ff; border-radius: 8px;
+    background: transparent; color: #1677ff; font-size: 15px; font-weight: 400;
+    line-height: 20px; letter-spacing: -0.23px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s, color 0.15s; font-family: inherit;
+  }
+  .add-btn:active { background: rgba(22,119,255,0.1); }
+
+  /* ===== FIXED BOTTOM BAR ===== */
+  .fixed-bottom {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #fff; box-shadow: 0 0 8px 0 rgba(18,18,35,0.1); z-index: 10;
+  }
+  .fixed-bottom-inner { display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 12px; }
+  .checkbox-row {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    user-select: none; border-radius: 4px; transition: opacity 0.15s;
+  }
+  .checkbox-img { width: 16px; height: 16px; flex-shrink: 0; display: block; }
+  .checkbox-label { font-size: 13px; font-weight: 400; line-height: 18px; letter-spacing: -0.08px; color: rgba(0,0,0,0.88); }
+  .checkbox-label span { color: #1677ff; }
+  .confirm-btn {
+    width: 100%; height: 40px; border-radius: 8px; border: none;
+    font-size: 15px; font-weight: 600; line-height: 20px; letter-spacing: -0.23px;
+    cursor: pointer; transition: background 0.2s, color 0.2s; font-family: inherit;
+  }
+  .confirm-btn.disabled { background: rgba(0,0,0,0.04); border: 1px solid #d9d9d9; color: rgba(0,0,0,0.25); cursor: not-allowed; }
+  .confirm-btn.enabled { background: #1677ff; color: #fff; box-shadow: 0 2px 0 0 rgba(5,145,255,0.1); }
+  .confirm-btn.enabled:active { background: #0958d9; }
+
+  .home-indicator { height: 21px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; }
+  .home-bar { width: 139px; height: 5px; background: #000; border-radius: 100px; }
+
+  /* ===== BOTTOM SHEET ===== */
+  .overlay {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    pointer-events: none; opacity: 0; transition: opacity 0.3s ease;
+  }
+  .overlay.open { pointer-events: auto; opacity: 1; }
+  .scrim { position: absolute; inset: 0; background: rgba(18,18,35,0.5); cursor: pointer; }
+  .bottom-sheet {
+    position: relative; z-index: 101; background: #f4f4f6;
+    border-radius: 24px 24px 0 0; box-shadow: 0 -2px 8px 0 rgba(18,18,35,0.1);
+    display: flex; flex-direction: column; max-height: 80%;
+    transform: translateY(100%); transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .overlay.open .bottom-sheet { transform: translateY(0); }
+  .sheet-header {
+    display: flex; align-items: center; justify-content: center;
+    padding: 12px; border-radius: 24px 24px 0 0; flex-shrink: 0; cursor: grab;
+  }
+  .sheet-handle { width: 48px; height: 2px; background: #d8dde4; border-radius: 500px; transition: background 0.15s; }
+  .sheet-content { overflow-y: auto; overflow-x: hidden; padding: 0 16px 16px; flex: 1; }
+  .sheet-content::-webkit-scrollbar { display: none; }
+  .sheet-payment-list { display: flex; flex-direction: column; gap: 32px; padding-bottom: 16px; }
+  .sheet-title-area { display: flex; flex-direction: column; gap: 12px; }
+  .sheet-title { font-size: 16px; font-weight: 600; line-height: 21px; letter-spacing: -0.31px; color: #292f40; text-align: center; }
+  .sheet-info-row { display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .sheet-info-text { font-size: 13px; font-weight: 400; line-height: 18px; letter-spacing: -0.08px; color: #1677ff; white-space: nowrap; }
+  .sheet-section { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .sheet-section-header { padding: 0 8px; font-size: 15px; font-weight: 600; line-height: 20px; letter-spacing: -0.23px; color: rgba(0,0,0,0.45); height: 20px; display: flex; align-items: center; }
+  .sheet-item {
+    background: #fff; border-radius: 12px; min-height: 60px;
+    padding: 12px 16px 12px 12px; display: flex; align-items: center;
+    justify-content: space-between; cursor: pointer; transition: background 0.15s;
+  }
+  .sheet-item:active { background: #e8e8e8; }
+  .sheet-item-left { display: flex; align-items: center; gap: 6px; }
+  .sheet-item-name { font-size: 15px; font-weight: 400; line-height: 20px; letter-spacing: -0.23px; color: rgba(0,0,0,0.88); white-space: nowrap; padding-top: 2px; }
+  .sheet-item-name.linebank { color: #292f40; font-family: "PingFang TC", sans-serif; }
+  .sheet-item-meta { font-size: 16px; font-weight: 400; line-height: 1.4; color: #5a6572; font-family: "PingFang TC", sans-serif; white-space: nowrap; }
+  .sheet-fixed-btn { flex-shrink: 0; background: #f4f4f6; padding: 16px 16px 0; display: flex; flex-direction: column; gap: 12px; }
+  .sheet-confirm-btn {
+    width: 100%; height: 40px; border-radius: 8px; border: none;
+    font-size: 15px; font-weight: 600; line-height: 20px; letter-spacing: -0.23px;
+    cursor: pointer; transition: background 0.2s; font-family: inherit;
+  }
+  .sheet-confirm-btn.disabled { background: rgba(0,0,0,0.04); border: 1px solid #d9d9d9; color: rgba(0,0,0,0.25); cursor: not-allowed; }
+  .sheet-confirm-btn.enabled { background: #1677ff; color: #fff; box-shadow: 0 2px 0 0 rgba(5,145,255,0.1); }
+  .sheet-confirm-btn.enabled:active { background: #0958d9; }
+  .icon-chevron { width: 16px; height: 16px; flex-shrink: 0; }
+  .sheet-checkbox { width: 16px; height: 16px; flex-shrink: 0; }
+
+  /* ===== HOVER STATES ===== */
+  @media (hover: hover) {
+    .back-btn:hover { background: rgba(0,0,0,0.06); }
+    .add-btn:hover { background: rgba(22,119,255,0.06); border-color: #4096ff; color: #4096ff; }
+    .checkbox-row:hover .checkbox-img { outline: 2px solid #1677ff; border-radius: 2px; }
+    .confirm-btn.enabled:hover { background: #4096ff; }
+    .sheet-item:hover { background: #f0f0f0; }
+    .sheet-confirm-btn.enabled:hover { background: #4096ff; }
+    .sheet-header:hover .sheet-handle { background: #b8c0c8; }
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- NAVBAR -->
+  <div class="navbar">
+    <div class="status-bar">
+      <div class="time-area"><span class="time">9:41</span></div>
+      <div class="dynamic-island"></div>
+      <div class="icons-area">
+        <img src="https://www.figma.com/api/mcp/asset/221a9213-3065-4b2e-9608-f94e650fc8f8" width="19.2" height="12.226" alt="">
+        <img src="https://www.figma.com/api/mcp/asset/0e82e9a4-4ff9-43e1-adb7-3c8116d30d58" width="17.142" height="12.328" alt="">
+        <img src="https://www.figma.com/api/mcp/asset/7fc6fef4-6733-4f1a-8c8f-e8d25d3d97ea" width="27.328" height="13" alt="">
+      </div>
+    </div>
+    <div class="navbar-content">
+      <div class="back-btn">
+        <svg width="24" height="24" viewBox="64 64 896 896" fill="rgba(0,0,0,0.88)">
+          <path d="M724 218.3V141c0-6.7-7.7-10.4-12.9-6.3L260.3 486.8a31.86 31.86 0 000 50.3l450.8 352.1c5.3 4.1 12.9.4 12.9-6.3v-77.3c0-4.9-2.3-9.6-6.1-12.6l-360-281 360-281.1c3.8-3 6.1-7.7 6.1-12.6z"/>
+        </svg>
+      </div>
+      <span class="navbar-title">授權扣款設定</span>
+      <div class="icon-space"></div>
+    </div>
+  </div>
+
+  <!-- PAGE CONTENT -->
+  <div class="page-content">
+
+    <!-- 授權內容 -->
+    <div class="section">
+      <div class="section-text">
+        <div class="section-title">授權內容</div>
+        <div class="section-desc">授權後，即同意授權平台主動向支付寶進行扣款，若以下內容有誤，請返回原平台進行修改。</div>
+      </div>
+      <div class="card" style="width:100%">
+        <div class="card-top">
+          <div class="shopee-row">
+            <div style="width:32px;height:32px;border-radius:6px;overflow:hidden;flex-shrink:0">
+              <img src="https://www.figma.com/api/mcp/asset/af686506-abe4-4323-9304-9de5411a4156" width="32" height="32" style="display:block;object-fit:cover" alt="Shopee">
+            </div>
+            <span class="shopee-name">Shopee Services</span>
+          </div>
+        </div>
+        <div class="card-bottom auth-item-row">
+          <span class="auth-item-label">授權項目</span>
+          <span class="auth-item-value">在蝦皮付款時，可選擇支付寶進行扣款。</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 扣款方式設定 -->
+    <div class="section">
+      <div class="section-text">
+        <div class="section-title">扣款方式設定</div>
+        <div class="section-desc">您可以新增多種付款方式，以利交易順利。</div>
+      </div>
+      <div class="payment-card" style="width:100%">
+        <div class="payment-list" id="payment-list"></div>
+        <div class="add-btn-area">
+          <button class="add-btn" onclick="openBottomSheet()">新增付款方式</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FIXED BOTTOM BAR -->
+  <div class="fixed-bottom">
+    <div class="fixed-bottom-inner">
+      <div class="checkbox-row" onclick="toggleTermsCheckbox()">
+        <img id="terms-checkbox-img" src="https://www.figma.com/api/mcp/asset/6357ff45-5b10-4a8d-a4d6-130e9ac6b087" class="checkbox-img" alt="checkbox">
+        <span class="checkbox-label">我已詳閱並同意 <span>授權條款</span></span>
+      </div>
+      <button class="confirm-btn disabled" id="main-confirm-btn" disabled>確認授權</button>
+    </div>
+    <div class="home-indicator"><div class="home-bar"></div></div>
+  </div>
+
+  <!-- BOTTOM SHEET -->
+  <div class="overlay" id="overlay">
+    <div class="scrim" onclick="closeBottomSheet()"></div>
+    <div class="bottom-sheet" id="bottom-sheet">
+      <div class="sheet-header" id="sheet-header">
+        <div class="sheet-handle"></div>
+      </div>
+      <div class="sheet-content">
+        <div class="sheet-payment-list">
+          <div class="sheet-title-area">
+            <div class="sheet-title">扣款方式</div>
+            <div class="sheet-info-row">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <circle cx="9" cy="9" r="8" stroke="#1677ff" stroke-width="1.2"/>
+                <path d="M9 5.5V9.5" stroke="#1677ff" stroke-width="1.4" stroke-linecap="round"/>
+                <circle cx="9" cy="12" r="0.8" fill="#1677ff"/>
+              </svg>
+              <span class="sheet-info-text">您可以新增多種付款方式，以利交易順利。</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:24px">
+            <div class="sheet-section">
+              <div class="sheet-section-header">儲值帳戶</div>
+              <div class="sheet-item" id="item-alipay" onclick="toggleSheetItem('alipay')">
+                <div class="sheet-item-left">
+                  <div style="width:24px;height:24px;flex-shrink:0">
+                    <div style="margin:2px;width:20px;height:20px;border-radius:4px;overflow:hidden">
+                      <img src="https://www.figma.com/api/mcp/asset/654bb8fd-3089-4e55-b866-71cd1665c48a" style="width:100%;height:100%;object-fit:cover;display:block" alt="Alipay">
+                    </div>
+                  </div>
+                  <div class="sheet-item-name">支付寶帳戶</div>
+                </div>
+                <img id="cb-alipay" src="https://www.figma.com/api/mcp/asset/6357ff45-5b10-4a8d-a4d6-130e9ac6b087" class="sheet-checkbox" alt="">
+              </div>
+            </div>
+            <div class="sheet-section">
+              <div class="sheet-section-header">信用卡</div>
+              <div class="sheet-item" id="item-linebank" onclick="toggleSheetItem('linebank')">
+                <div class="sheet-item-left">
+                  <div style="width:24px;height:24px;flex-shrink:0;padding:2px">
+                    <div style="width:20px;height:20px;border-radius:4px;overflow:hidden">
+                      <img src="https://www.figma.com/api/mcp/asset/f3680ec6-ba04-4339-b34e-6afbbe069633" style="width:150.57%;height:150.57%;object-fit:cover;display:block;margin-left:-25.57%;margin-top:-23.99%" alt="LineBank">
+                    </div>
+                  </div>
+                  <div class="sheet-item-name linebank">連線銀行帳戶</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <span class="sheet-item-meta">*12345</span>
+                  <img id="cb-linebank" src="https://www.figma.com/api/mcp/asset/6357ff45-5b10-4a8d-a4d6-130e9ac6b087" class="sheet-checkbox" alt="">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sheet-fixed-btn">
+        <button class="sheet-confirm-btn enabled" id="sheet-confirm-btn" onclick="confirmSelection()">確認</button>
+        <div class="home-indicator"><div class="home-bar"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CHECKBOX_ACTIVE   = 'https://www.figma.com/api/mcp/asset/536b16b5-c103-4dab-bf32-2bebe01ce86e';
+  const CHECKBOX_INACTIVE = 'https://www.figma.com/api/mcp/asset/6357ff45-5b10-4a8d-a4d6-130e9ac6b087';
+
+  let termsChecked = false;
+  const METHODS = {
+    alipay:   { id:'alipay',   logo:'https://www.figma.com/api/mcp/asset/654bb8fd-3089-4e55-b866-71cd1665c48a', name:'支付寶帳戶',   isLineBank:false },
+    linebank: { id:'linebank', logo:'https://www.figma.com/api/mcp/asset/f3680ec6-ba04-4339-b34e-6afbbe069633', name:'連線銀行帳戶', isLineBank:true  }
+  };
+
+  let lastConfirmedSelection = { alipay: true, linebank: false };
+  let sheetSelected = { ...lastConfirmedSelection };
+
+  function toggleTermsCheckbox() {
+    termsChecked = !termsChecked;
+    document.getElementById('terms-checkbox-img').src = termsChecked ? CHECKBOX_ACTIVE : CHECKBOX_INACTIVE;
+    const btn = document.getElementById('main-confirm-btn');
+    btn.classList.toggle('enabled', termsChecked);
+    btn.classList.toggle('disabled', !termsChecked);
+    btn.disabled = !termsChecked;
+  }
+
+  function openBottomSheet() {
+    const hasAny = Object.values(lastConfirmedSelection).some(v => v);
+    sheetSelected = hasAny ? { ...lastConfirmedSelection } : { alipay: true, linebank: false };
+    applySheetCheckboxUI();
+    updateSheetConfirmBtn();
+    document.getElementById('overlay').classList.add('open');
+  }
+
+  function applySheetCheckboxUI() {
+    document.getElementById('cb-alipay').src   = sheetSelected.alipay   ? CHECKBOX_ACTIVE : CHECKBOX_INACTIVE;
+    document.getElementById('cb-linebank').src = sheetSelected.linebank ? CHECKBOX_ACTIVE : CHECKBOX_INACTIVE;
+  }
+
+  function closeBottomSheet() {
+    document.getElementById('overlay').classList.remove('open');
+  }
+
+  function toggleSheetItem(id) {
+    sheetSelected[id] = !sheetSelected[id];
+    document.getElementById('cb-' + id).src = sheetSelected[id] ? CHECKBOX_ACTIVE : CHECKBOX_INACTIVE;
+    updateSheetConfirmBtn();
+  }
+
+  function updateSheetConfirmBtn() {
+    const has = Object.values(sheetSelected).some(v => v);
+    const btn = document.getElementById('sheet-confirm-btn');
+    btn.classList.toggle('enabled', has);
+    btn.classList.toggle('disabled', !has);
+    btn.disabled = !has;
+  }
+
+  function confirmSelection() {
+    lastConfirmedSelection = { ...sheetSelected };
+    rebuildPaymentList();
+    document.getElementById('overlay').classList.remove('open');
+  }
+
+  function rebuildPaymentList() {
+    const list = document.getElementById('payment-list');
+    list.innerHTML = '';
+    ['alipay','linebank'].filter(id => lastConfirmedSelection[id]).forEach((id, i) => {
+      if (i > 0) { const d = document.createElement('div'); d.className = 'payment-divider'; list.appendChild(d); }
+      list.appendChild(buildPaymentItem(METHODS[id]));
+    });
+  }
+
+  function buildPaymentItem(method) {
+    const item = document.createElement('div');
+    item.className = 'payment-item';
+    item.dataset.methodId = method.id;
+    const chevron = `<svg class="icon-chevron" viewBox="0 0 16 16" fill="none"><path d="M6 3.5L10.5 8L6 12.5" stroke="rgba(0,0,0,0.45)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    if (method.isLineBank) {
+      item.innerHTML = `<div class="payment-item-left">
+        <div style="width:24px;height:24px;flex-shrink:0;padding:2px">
+          <div style="width:20px;height:20px;border-radius:4px;overflow:hidden">
+            <img src="${method.logo}" style="width:150.57%;height:150.57%;object-fit:cover;display:block;margin-left:-25.57%;margin-top:-23.99%" alt="${method.name}">
+          </div>
+        </div>
+        <div class="payment-item-text"><span class="payment-item-name linebank">${method.name}</span></div>
+      </div>${chevron}`;
+    } else {
+      item.innerHTML = `<div class="payment-item-left">
+        <div style="width:24px;height:24px;flex-shrink:0">
+          <div style="margin:2px;width:20px;height:20px;border-radius:4px;overflow:hidden">
+            <img src="${method.logo}" style="width:100%;height:100%;object-fit:cover;display:block" alt="${method.name}">
+          </div>
+        </div>
+        <div class="payment-item-text">
+          <span class="payment-item-name">${method.name}</span>
+          <span class="payment-item-subtitle">預先幫您選擇的扣款方式</span>
+        </div>
+      </div>${chevron}`;
+    }
+    return item;
+  }
+
+  // Drag to close
+  let dragStartY = 0, isDragging = false, dragCurrentY = 0;
+  const sheetEl     = document.getElementById('bottom-sheet');
+  const sheetHeader = document.getElementById('sheet-header');
+
+  function onDragStart(e) { isDragging = true; dragStartY = e.touches ? e.touches[0].clientY : e.clientY; sheetEl.style.transition = 'none'; }
+  function onDragMove(e) {
+    if (!isDragging) return;
+    const delta = (e.touches ? e.touches[0].clientY : e.clientY) - dragStartY;
+    if (delta > 0) { dragCurrentY = delta; sheetEl.style.transform = `translateY(${delta}px)`; }
+  }
+  function onDragEnd() {
+    if (!isDragging) return;
+    isDragging = false;
+    sheetEl.style.transition = 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1)';
+    dragCurrentY > 80 ? closeBottomSheet() : (sheetEl.style.transform = 'translateY(0)');
+    dragCurrentY = 0;
+  }
+
+  sheetHeader.addEventListener('touchstart', onDragStart, { passive: true });
+  sheetHeader.addEventListener('touchmove',  onDragMove,  { passive: true });
+  sheetHeader.addEventListener('touchend',   onDragEnd);
+  sheetHeader.addEventListener('mousedown',  onDragStart);
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup',   onDragEnd);
+
+  rebuildPaymentList();
+</script>
+</body>
+</html>
